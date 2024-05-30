@@ -50,7 +50,7 @@ if "board" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-col1, col2, col3 = st.columns(3)
+col1, col2, emptycol, col3 = st.columns(4)
 with col1:
     if st.button("Start a new game"):
         st.session_state.board = initialize_board()
@@ -58,10 +58,12 @@ with col1:
 with col2:
     if st.button("Clear chat"):
         st.session_state.messages = []
+with emptycol:
+    st.write("   ")
 with col3:
     st.session_state.show_chat = st.checkbox("Show chat history", value=True)
 
-if st.checkbox("Show raw data"):
+if st.checkbox("Show current FEN"):
     st.write(st.session_state.board.fen())
 
 if st.session_state.show_chat:
@@ -86,7 +88,7 @@ if prompt := st.chat_input("What is your move?"):
             st.session_state.game_ended = True
         elif st.session_state.board.is_checkmate():
             response_message = "Game Over - You won!"
-            st.session_state.egame_ended = True
+            st.session_state.game_ended = True
         else:
             bot_move = random_move(st.session_state.board)
             response_message = st.session_state.board.san(bot_move)
@@ -118,7 +120,7 @@ if prompt := st.chat_input("What is your move?"):
     if st.session_state.game_ended:
         st.session_state.board.set_fen(chess.STARTING_FEN)
         st.session_state.game_ended = False
-        new_game_message = "Lets start a new game :)"
+        new_game_message = "Lets start a new game. Let me reset the board..."
         st.chat_message("assistant").markdown(new_game_message)
         st.session_state.messages.append(
             {"role": "assistant", "content": new_game_message}
