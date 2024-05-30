@@ -1,9 +1,8 @@
 import streamlit as st
 import random
-import time
 import chess
 
-game_ended = False
+# import time
 
 
 def is_a_draw(board):
@@ -34,127 +33,93 @@ def is_move_legal(board, move):
     return move in board.legal_moves
 
 
-print("start")
-board = chess.Board()
-board.set_fen(chess.STARTING_FEN)
+def initialize_board():
+    board = chess.Board()
+    board.set_fen(chess.STARTING_FEN)
+    return board
 
 
-st.title("Simple blind-chess chat-bot")
+st.title("Blind-chess chat-bot")
 
-if st.checkbox("Show raw data"):
-    st.write(board.fen())
-    # for row in str(board).split("\n"):
-    #     st.write(row)
+if "board" not in st.session_state:
+    st.session_state.game_ended = False
+    st.session_state.board = initialize_board()
+
 
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("Start a new game"):
+        st.session_state.board = initialize_board()
+        st.session_state.messages = []
+with col2:
+    if st.button("Clear chat"):
+        st.session_state.messages = []
+with col3:
+    st.session_state.show_chat = st.checkbox("Show chat history", value=True)
+
+if st.checkbox("Show raw data"):
+    st.write(st.session_state.board.fen())
+
+if st.session_state.show_chat:
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
 # Accept user input
 if prompt := st.chat_input("What is your move?"):
-    print(prompt)
-    st.chat_message("user").markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
-    pass_count = 0
-    print(f"passed: {pass_count}")
-    pass_count += 1
+    # TODO: get rid of this variable
+    user_message = prompt
+    st.chat_message("user").markdown(user_message)
+    st.session_state.messages.append({"role": "user", "content": user_message})
 
     try:
-        print("trying")
+        st.session_state.board.push_san(prompt)
 
-        print()
-        print(board)
-        print()
+        check_draw, draw_type = is_a_draw(st.session_state.board)
+        if check_draw:
+            response_message = f"Draw: {draw_type}"
+            st.session_state.game_ended = True
+        elif st.session_state.board.is_checkmate():
+            response_message = "Game Over - You won!"
+            st.session_state.egame_ended = True
+        else:
+            bot_move = random_move(st.session_state.board)
+            response_message = st.session_state.board.san(bot_move)
 
-        board.push_san(prompt)
+            # board.push(bot_move)
+            st.session_state.board.push_san(st.session_state.board.san(bot_move))
 
-        print("new board:")
+            check_draw, draw_type = is_a_draw(st.session_state.board)
 
-        print()
-        print(board)
-        print()
-
-        print(f"passed: {pass_count}")
-        pass_count += 1
-
-        with st.chat_message("assistant"):
-            init_react = f"{prompt} you say? insteresting..."
-            init_response = st.markdown(init_react)
-            st.session_state.messages.append(
-                {"role": "assistant", "content": init_response}
-            )
-
-            print(f"passed: {pass_count}")
-            pass_count += 1
-
-            check_draw, draw_type = is_a_draw(board)
             if check_draw:
-                response_message = f"Draw: {draw_type}"
-                game_ended = True
-            elif board.is_checkmate():
-                response_message = "Game Over - You won!"
-                game_ended = True
-            else:
-                print(f"passed: {pass_count}")
-                pass_count += 1
+                response_message += f"Draw: {draw_type}"
+                st.session_state.game_ended = True
+            elif st.session_state.board.is_checkmate():
+                response_message += "Game Over - I won!"
+                st.session_state.game_ended = True
 
-                bot_move = random_move(board)
-                response_message = board.san(bot_move)
-
-                print(bot_move)
-                print(board.san(bot_move))
-
-                print()
-                print(board)
-                print()
-
-                print(f"passed: {pass_count}")
-                pass_count += 1
-
-                # board.push(bot_move)
-                board.push_san(board.san(bot_move))
-
-                print()
-                print(board)
-                print()
-
-                check_draw, draw_type = is_a_draw(board)
-                print("draw checked")
-                print(f"{check_draw}")
-
-                if check_draw:
-                    end_message = f"Draw: {draw_type}"
-                    game_ended = True
-                elif board.is_checkmate():
-                    end_message = "Game Over - I won!"
-                    game_ended = True
-
-            print(response_message)
-            response = st.markdown(response_message)
+        st.chat_message("assistant").markdown(response_message)
+        st.session_state.messages.append(
+            {"role": "assistant", "content": response_message}
+        )
 
     except ValueError:
-        print("oops")
-        with st.chat_message("assistant"):
-            response = st.markdown("This is not a legal move.")
-    print("finish line")
+        error_response = "This is not a legal move."
+        st.chat_message("assistant").markdown(error_response)
+        st.session_state.messages.append(
+            {"role": "assistant", "content": error_response}
+        )
 
-    print()
-    print(board)
-    print()
-
-    st.session_state.messages.append({"role": "assistant", "content": response})
-
-    if game_ended:
-        print("ended")
-        board.set_fen(chess.STARTING_FEN)
-        game_ended = False
-
-        with st.chat_message("assistant"):
-            response = st.markdown("Lets start a new game :)")
-            st.session_state.messages.append({"role": "assistant", "content": response})
+    if st.session_state.game_ended:
+        st.session_state.board.set_fen(chess.STARTING_FEN)
+        st.session_state.game_ended = False
+        new_game_message = "Lets start a new game :)"
+        st.chat_message("assistant").markdown(new_game_message)
+        st.session_state.messages.append(
+            {"role": "assistant", "content": new_game_message}
+        )
