@@ -15,5 +15,5 @@ streamlit run app.py
 ## Contribute 🤝
 Feel free to fork this project and contribute. Whether it's improving the logic or fixing bugs, your help is welcome!
 
-License 📄
+## License 📄
 This project is open-sourced under the GNU General Public License v3.0.
